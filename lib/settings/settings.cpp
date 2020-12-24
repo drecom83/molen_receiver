@@ -31,6 +31,21 @@ String Settings::getTargetPath()
   return this->targetPath;
 }
 
+String Settings::getFactoryRoleModel()
+{
+  return this->factoryRoleModel;
+}
+
+String Settings::getRoleModel()
+{
+  return this->roleModel;
+}
+
+void Settings::setRoleModel(String roleModel)
+{
+  this->roleModel = roleModel;
+}
+
 uint8_t Settings::atoi8_t(String s) 
 {
     uint8_t i, n;
@@ -139,6 +154,11 @@ uint16_t Settings::saveSettings()
   strcpy(myTargetPath, this->targetPath.c_str());
   EEPROM.put(address, myTargetPath);
   address += 17;
+
+  char myRoleModel[33];  // one more for the null character
+  strcpy(myRoleModel, this->roleModel.c_str());
+  EEPROM.put(address, myRoleModel);
+  address += 33;
 
   char myDeviceKey[37];  // one more for the null character
   strcpy(myDeviceKey, this->deviceKey.c_str());
@@ -249,6 +269,11 @@ uint16_t Settings::initSettings()
   EEPROM.put(address, myFactoryTargetPath);
   address += 17;
 
+  char myFactoryRoleModel[33];  // one more for the null character
+  strcpy(myFactoryRoleModel, this->factoryRoleModel.c_str());
+  EEPROM.put(address, myFactoryRoleModel);
+  address += 33;
+
   //uint8_t myMaxDeviceKey = sizeof(this->deviceKey);
   char myDeviceKey[37];  // one more for the null character
   strcpy(myDeviceKey, this->factoryDeviceKey.c_str());
@@ -302,6 +327,11 @@ uint16_t Settings::getSettings()
   EEPROM.get(address, myTargetPath);
   this->targetPath = String(myTargetPath);
   address += 17;
+
+  char myRoleModel[33];  // one more for the null character
+  EEPROM.get(address, myRoleModel);
+  this->roleModel = String(myRoleModel);
+  address += 33;
 
   //uint8_t myMaxDeviceKey = sizeof(this->deviceKey);
   char mydeviceKey[37];
@@ -367,6 +397,11 @@ uint16_t Settings::saveConfigurationSettings()
     EEPROM.put(address, myTargetPath);
   //}
   address += 17;
+
+  char myRoleModel[33];  // one more for the null character
+  strcpy(myRoleModel, this->roleModel.c_str());
+  EEPROM.put(address, myRoleModel);
+  address += 33;
 
   /*
   //char check_myDeviceKey[37];  // one more for the null character

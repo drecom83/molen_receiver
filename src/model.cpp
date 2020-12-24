@@ -12,7 +12,7 @@
 #include "handleHTTPClient.h"
 #include "WiFiSettings.h"
 
-// WIFI URL: http://192.168.4.1/ or http://molen.local/
+// WIFI URL: http://192.168.4.1/ or http://model.local/
 /////////////////////
 // Pin Definitions //
 /////////////////////
@@ -22,11 +22,6 @@
 // when using D0 only one direction of receiver works, so now using D8
 
 // D5 gives troubles when it is high at the start.
-
-const uint8_t IR_RECEIVE_1 = D5;    // Digital pin to read an incoming signal
-const uint8_t IR_RECEIVE_2 = D6;    // Digital pin to read an incoming signal
-
-const uint8_t IR_SEND = D8;         // switch for IR send LED. 0 = off, 1 = on
 
 const uint8_t BUTTON = D7;          // Digital pin to read button-push
 const uint8_t BLUE_LED = D4;
@@ -61,11 +56,6 @@ void showSettings();
 void switchToAccessPoint();
 void handleShowWiFiMode();
 void initServer();
-void sendExample();
-
-void ICACHE_RAM_ATTR detectPulse();
-void echoInterruptOn();
-void echoInterruptOff();
 
 void ICACHE_RAM_ATTR detectButton();
 void buttonInterruptOn();
@@ -108,27 +98,25 @@ void initSettings() {
 // end Settings and EEPROM stuff
 
 void setupWiFi(){
-  echoInterruptOff();  // to prevent error with Delay
   digitalWrite(YELLOW_1_LED, LOW);
   digitalWrite(YELLOW_2_LED, HIGH);
   digitalWrite(YELLOW_3_LED, LOW);
 
   WiFi.mode(WIFI_AP);
-
   String myssid = pWifiSettings->readAccessPointSSID();
+  String mypass = pWifiSettings->readAccessPointPassword();
+
   if (myssid == "")
   {
     myssid = "ESP-" + WiFi.macAddress();
   }
-  String mypass = pWifiSettings->readAccessPointPassword();
 
   IPAddress local_IP(192,168,4,1);
   IPAddress gateway(192,168,4,1);
   IPAddress subnet(255,255,255,0);
 
-
   Serial.print("Setting soft-AP ... ");
-  // mypass needs minimum of 8 characters
+  // mypass needs minimum of 8 characters, otherwise it shall fail !
   Serial.println(WiFi.softAP(myssid,mypass,3,0) ? "Ready" : "Failed!");
   Serial.print("Setting soft-AP configuration ... ");
   Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
@@ -143,14 +131,10 @@ void setupWiFi(){
   digitalWrite(YELLOW_2_LED, LOW);
   
   pSettings->beginAsAccessPoint(true);
- 
-  echoInterruptOn();  // to prevent error with Delay
-
 }
 
 void setupWiFiManager () {
   bool networkConnected = false;
-  echoInterruptOff();  // to prevent error with Delay
 
   digitalWrite(YELLOW_1_LED, LOW);
   digitalWrite(YELLOW_2_LED, HIGH);
@@ -179,7 +163,6 @@ void setupWiFiManager () {
       Serial.println(WiFi.gatewayIP());
       Serial.println(WiFi.macAddress());
     
-      echoInterruptOn();  // to prevent error with Delay
       networkConnected = true;
       pSettings->setLastNetworkIP(WiFi.localIP().toString());
 
@@ -196,7 +179,6 @@ void setupWiFiManager () {
 }
 
 void resetWiFiManagerToFactoryDefaults () {
-  echoInterruptOff();  // to prevent error with Delay
 
   // WiFi.disconnect(true);  // true argument should also erase ssid and password
   // https://www.pieterverhees.nl/sparklesagarbage/esp8266/130-difference-between-esp-reset-and-esp-restart
@@ -212,13 +194,9 @@ void resetWiFiManagerToFactoryDefaults () {
     Serial.println("waited 3 seconds");
     toomuch -= 1;
   }
-
-  echoInterruptOn();  // to prevent error with Delay
 }
 
 void switchToAccessPoint() {
-  echoInterruptOff();  // to prevent error with Delay
-
   pSettings->beginAsAccessPoint(!  pSettings->beginAsAccessPoint());  // toggle
   handleShowWiFiMode();
   delay(pSettings->WAIT_PERIOD);
@@ -243,13 +221,9 @@ void switchToAccessPoint() {
   mDNSnotifyAPChange();
   //startmDNS();
   // end domain name server check
-
-  echoInterruptOn();  // to prevent error with Delay
 }
 
 void switchToNetwork() {
-  echoInterruptOff();  // to prevent error with Delay
-
   handleShowWiFiMode();
   delay(pSettings->WAIT_PERIOD);
 
@@ -273,8 +247,6 @@ void switchToNetwork() {
   mDNSnotifyAPChange();
 
   //startmDNS();
-
-  echoInterruptOn();  // to prevent error with Delay
 }
 
 void writeResult(WiFiClient wifiClient, String result) {
@@ -293,46 +265,6 @@ void flashPin(uint8_t pin, uint8_t ms) {
     delayMicroseconds(250);   // delay in the loop could cause an exception (9) when using interrupts
   }
   digitalWrite(pin, LOW);
-}
-
-void checkGlobalPulseInLoop() {
-  // sets value to 0 after a period of time
-  uint32_t elapsedTime;
-  if (millis() > startPulse) {  // check for overflow
-    
-    elapsedTime = millis() - startPulse;
-    if (elapsedTime * pSettings->ratio > TOO_LONG) {
-      pulsesPerMinute  = 0;
-      viewPulsesPerMinute = 0;
-    }   
-  }
-}
-
-void setGlobalPulsesPerMinute() {
-  /*
-  start = millis();
-  Returns the number of milliseconds since the Arduino board began
-  running the current program. This number will overflow (go back to zero),
-  after approximately 50 days.
-  */
-  // use previous value if an overflow of millis() occurs,
-  // it does not have to be too precise
-  uint32_t elapsedTime;
-  if (millis() > startPulse) {  // check for overflow
-    elapsedTime = millis() - startPulse;
-
-    // measuremens shorter then the delay time are invalid (with an extra 50 ms to be sure)
-    //if (elapsedTime > START_PERIOD) {
-      if (elapsedTime > 0) {
-        // get duration to get 1 pulse
-        pulsesPerMinute = (uint32_t) round(60000 / elapsedTime);
-      }
-      else {
-        pulsesPerMinute = 0;    // maybe slow movement, but rounded to 0
-      }
-   //}
-    startPulse = millis();
-  }
 }
 
 void delayInMillis(uint8_t ms)
@@ -366,65 +298,6 @@ void buttonInterruptOn() {
 
 void buttonInterruptOff() {
   detachInterrupt(BUTTON);
-}
-
-void ICACHE_RAM_ATTR detectPulse() {  // ICACHE_RAM_ATTR is voor interrupts
-  // this function is called after a change of every sensor-value
-  // wait until both sensors are true, then permissionToDetect = true
-  // if both sensors are false and permissionToDetect == true then it counts as a valid pulse
-  // after a valid pulse the value of permissionToDetect is set to false to start over again
-  echoInterruptOff();
-    // for energy savings a delay is added of n milliseconds
-  delayInMillis(RELAX_PERIOD);
-
-  if ( (digitalRead(IR_RECEIVE_1) == true) && 
-      (digitalRead(IR_RECEIVE_2) == true) &&
-      (permissionToDetect == true) )
-  {
-    permissionToDetect = false;
-    flashPin(BLUE_LED, 1);
-  }
-
-  if ( (digitalRead(IR_RECEIVE_1) == false) && 
-      (digitalRead(IR_RECEIVE_2) == false) && 
-      (permissionToDetect == false) )
-  {
-    permissionToDetect = true;  // start over again
-
-    pSettings->setCounter(pSettings->getCounter() + 1); // added 1 pulse
-    setGlobalPulsesPerMinute();
-    // calculate with ratio
-    if (pSettings->blades < 1) {
-      pSettings->blades = 1;
-    }
-
-    viewPulsesPerMinute = round(pulsesPerMinute / pSettings->pulseFactor);
-
-    revolutions = floor(pSettings->getCounter() / pSettings->pulseFactor);
-  }
-  echoInterruptOn();
-}
-
-void echoInterruptOn() {
-  // 0 = ir_light, 1 is no ir_light
-  attachInterrupt(IR_RECEIVE_1, detectPulse, CHANGE);
-  attachInterrupt(IR_RECEIVE_2, detectPulse, CHANGE);
-}
-
-void echoInterruptOff() {
-  detachInterrupt(IR_RECEIVE_1);
-  detachInterrupt(IR_RECEIVE_2);
-}
-
-void handleCountPage() {
-  if (pSettings->getLanguage() == "NL")
-  {
-    countPage_nl(server, pSettings);
-  }
-  else
-  {
-    countPage(server, pSettings);
-  }
 }
 
 void handleShowWiFiMode()
@@ -463,18 +336,6 @@ void handleDevice() {
 
 void handleSse() {
   sse(server, pSettings, revolutions, viewPulsesPerMinute);
-}
-
-void handleArguments() {
-  if (pSettings->getLanguage() == "NL")
-  {
-    arguments_nl(server, pSettings);
-  }
-  else
-  {
-    arguments(server, pSettings);
-  }
-  showSettings();
 }
 
 void mydebug() {
@@ -807,27 +668,15 @@ void handleDeviceSettings()
     argumentCounter = server.args();  // if argumentCounter > 0 then saveConfigurationSettings
     String _name = "";
     String _startWiFiMode = "";
-    String _counter = "";
-    String _ratio = "";
     String _targetServer = "";
     String _targetPort = "";
     String _targetPath = "";
-    String _allowSendingData = "";
-    String _isOpen = "";
-    String _showData = "";
-    String _message = "";
     for (uint8_t i=0; i< server.args(); i++){
       if (server.argName(i) == "name") {
         _name = server.arg(i);
       }
       if (server.argName(i) == "startWiFiMode") {
         _startWiFiMode = server.arg(i);
-      }
-      if (server.argName(i) == "counter") {
-        _counter = server.arg(i);
-      }
-      if (server.argName(i) == "ratio") {
-        _ratio = server.arg(i);
       }
       if (server.argName(i) == "targetServer") {
         _targetServer = server.arg(i);
@@ -837,18 +686,6 @@ void handleDeviceSettings()
       }
       if (server.argName(i) == "targetPath") {
         _targetPath = server.arg(i);
-      }
-      if (server.argName(i) == "allowSendingData") {
-        _allowSendingData = server.arg(i);
-      }
-      if (server.argName(i) == "isOpen") {
-        _isOpen = server.arg(i);
-      }
-      if (server.argName(i) == "showData") {
-        _showData = server.arg(i);
-      }
-      if (server.argName(i) == "message") {
-        _message = server.arg(i);
       }
     }
     // zoek name (is device, targetServer of targetserverData en dan de andere parameters)
@@ -860,21 +697,12 @@ void handleDeviceSettings()
       if (_startWiFiMode == "network") {
         pSettings->beginAsAccessPoint(false);
       }
-      pSettings->setCounter(_counter);
-      pSettings->setRatioArgument(_ratio);
     }
     if (_name == "targetServer")
     {
       pSettings->setTargetServer(_targetServer);
       pSettings->setTargetPort(_targetPort);
       pSettings->setTargetPath(_targetPath);
-    }
-    if (_name == "targetServerData")
-    {
-      pSettings->setAllowSendData(_allowSendingData);
-      pSettings->setEntree(_isOpen);
-      pSettings->setShowData(_showData);
-      pSettings->setTargetServerMessage(_message);  // message will not be saved in EEPROM
     }
     if (argumentCounter > 0) {
       pSettings->saveConfigurationSettings();
@@ -912,9 +740,6 @@ void toggleWiFi()
 void initHardware()
 {
   Serial.begin(115200);
-  pinMode(IR_SEND, OUTPUT);      // default LOW
-  pinMode(IR_RECEIVE_1, INPUT);  // default down
-  pinMode(IR_RECEIVE_2, INPUT);  // default down
 
   pinMode(BLUE_LED, OUTPUT);
   pinMode(YELLOW_1_LED, OUTPUT);
@@ -928,7 +753,6 @@ void initServer()
   // start webserver
 
   server.on("/help/", handleHelp);
-  server.on("/count/", handleCountPage);
 
   // handles notFound
   server.onNotFound(handleHelp);
@@ -948,7 +772,6 @@ void initServer()
   // url-commands, not used in normal circumstances
   server.on("/ap/", switchToAccessPoint);
   server.on("/network/", switchToNetwork);
-  server.on("/settings/", handleArguments);
   server.on("/eraseSettings/", eraseSettings);
   server.on("/initSettings/", initSettings);
   server.on("/getSettings/", getSettings);
@@ -972,18 +795,14 @@ void setup()
   /* It seems to help preventing ESPerror messages with mode(3,6) when
   using a delay */
   initHardware();
-  digitalWrite(IR_RECEIVE_1, LOW);
-  digitalWrite(IR_RECEIVE_2, LOW);
 
-  delay(pSettings->WAIT_PERIOD);
-
-  // see https://forum.arduino.cc/index.php?topic=121654.0 voor circuit brownout
+   // see https://forum.arduino.cc/index.php?topic=121654.0 voor circuit brownout
   delay(pSettings->WAIT_PERIOD);
   // use EITHER setupWiFi OR setupWiFiManager
   
   if (pSettings->beginAsAccessPoint())
   {
-    setupWiFi();        // local network as access point
+  setupWiFi();        // local network as access point
   }
   else
   {
@@ -996,12 +815,10 @@ void setup()
   delay(pSettings->WAIT_PERIOD);
 
   initServer();
+
   delay(pSettings->WAIT_PERIOD);
 
-  echoInterruptOn();
-
   buttonInterruptOn();
-  digitalWrite(IR_SEND, HIGH);
 }
 
 void loop()
@@ -1020,11 +837,10 @@ void loop()
   server.handleClient();
   
   // For handleHTTPClient
-  if ((WiFi.getMode() == WIFI_STA) && (pSettings->allowSendingData() == true))
+  if (WiFi.getMode() == WIFI_STA)
   {
     /* send data to target server using ESP8266HTTPClient */
-    handleHTTPClient(wifiClient, pSettings, String(WiFi.macAddress()), revolutions, viewPulsesPerMinute);
+    handleHTTPClient(wifiClient, pSettings, String(WiFi.macAddress()));
   }
 
-  checkGlobalPulseInLoop();
 }

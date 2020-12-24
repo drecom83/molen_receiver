@@ -38,9 +38,9 @@ private:
   uint16_t factoryTargetPort = 80;
 
   /* target path, max size = 16 */
-  String targetPath = "/feed/";
+  String targetPath = "/eat/";
   /* factoryTargetPath server */
-  String factoryTargetPath = "/feed/";
+  String factoryTargetPath = "/eat/";
 
   /* Maximum size of EEPROM, SPI_FLASH_SEC_SIZE comes from spi_flash.h */
   const uint16_t MAX_EEPROM_SIZE = SPI_FLASH_SEC_SIZE;
@@ -76,15 +76,10 @@ private:
   /* 17 bytes to store, last given IP number to the device from a WiFi network, will not be saved */
   String lastNetworkIP = "Unknown";
 
-
-public:
-
-  /* hold the factor to let the motor turn faster or slower
-     > 1 is accelaration 
-     < 1 is decelleration 
-  */
-  float factor = 1.0f;           
-
+  /* roleModel, this is where the model gets the data from, max size = 32 */
+  String roleModel = "Free";
+  /* factoryRoleModel, this is where the model gets the data from, max size = 32 */
+  String factoryRoleModel = "Free";  // Free means no roleModel defined
 
 public:
   Settings()
@@ -98,6 +93,7 @@ public:
                         33 +                  // max size targetServer + 1
                         sizeof(this->targetPort) + 
                         17 +                  // max size of targetPath + 1
+                        33 +                  // max size roleModel + 1
                         37;                  // MAX_DEVICEKEY + 1
 
     //this->initSettings(); // is called through the browser
@@ -189,6 +185,15 @@ public:
 
   /* set target path */
   void setTargetPath(String targetPath);
+
+  /* return factory setting for roleModel */
+  String getFactoryRoleModel();
+
+  /* roleModel */
+  String getRoleModel();
+
+  /* set roleModel */
+  void setRoleModel(String roleModel);
 
   /* EEPROM Offset Address, for use in other functions or classes */
   uint16_t getOffsetAddress();

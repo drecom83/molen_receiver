@@ -1,5 +1,26 @@
 #include "WiFiSettings.h"
 
+bool WiFiSettings::isInitialized() {
+  /* if first 8 characters are 0xff then it is considered not initialised */
+  uint16_t startAddress = this->address;
+  uint16_t lastAddress = this->address + 8;
+  delay(this->WAIT_PERIOD);
+
+  EEPROM.begin(this->MAX_EEPROM_SIZE);
+  bool initialised = false;
+  for (uint16_t i = startAddress; i < lastAddress; i++) {
+    if ((initialised == false) && (EEPROM.read(i) != 0xff)) {
+      initialised = true;
+    };
+  }
+
+  EEPROM.end();  // release RAM copy of EEPROM content
+
+  delay(this->WAIT_PERIOD);
+ 
+  return initialised;
+}
+
 uint16_t WiFiSettings::saveAuthorizationAccessPoint()
 {
   uint16_t firstAddress = this->address;

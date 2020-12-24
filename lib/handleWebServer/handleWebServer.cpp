@@ -43,13 +43,13 @@ void help(ESP8266WebServer &server, Settings * pSettings)
   {
     result += "Access Point\r\n";
     result += "<br>\r\n";
-    result += "(url: <a href='http://molen.local/' target='_blank'>molen.local</a> or <a href='http://192.168.4.1/' target='_blank'>http://192.168.4.1</a>)\r\n";
+    result += "(url: <a href='http://model.local/' target='_blank'>model.local</a> or <a href='http://192.168.4.1/' target='_blank'>http://192.168.4.1</a>)\r\n";
   }
   else
   {
     result += "Network Station\r\n";
     result += "<br>\r\n";
-    result += "(url: <a href='http://molen.local/' target='_blank'>molen.local</a> or via a local IP address, last known is: <a href='http://";
+    result += "(url: <a href='http://model.local/' target='_blank'>model.local</a> or via a local IP address, last known is: <a href='http://";
     result += pSettings->getLastNetworkIP();
     result += "/' target='_blank'>";
     result += pSettings->getLastNetworkIP();
@@ -67,13 +67,11 @@ void help(ESP8266WebServer &server, Settings * pSettings)
 
   result += "Menu\r\n";
   result += "<br><br><br>\r\n";
-  result += "<a href='/count/'>Counter</a> show pulses and number of blades per minute\r\n";
-  result += "<br><br>\r\n";
   result += "<a href='/help/'>help</a> help/home screen\r\n";
   result += "<br><br>\r\n";
-  result += "<a href='/device/'>Counter settings</a> ratio, WiFi mode, Server settings\r\n";
+  result += "<a href='/device/'>Model settings</a> WiFi mode, Server settings\r\n";
   result += "<br><br>\r\n";
-  result += "<a href='/wifi/'>WiFi</a> settings to connect the Counter to WiFi\r\n";
+  result += "<a href='/wifi/'>WiFi</a> settings to connect the Model to WiFi\r\n";
   result += "<br><br>\r\n";
 
   result += "<script>\r\n";
@@ -286,30 +284,6 @@ void device(ESP8266WebServer &server, Settings * pSettings)
   result += "      }\r\n";
   result += "  }\r\n";
   result += "\r\n";
-  result += "  function checkRatio(component, messageId, message) {\r\n";
-  result += "    var buttonId = component.parentNode.id + \"Button\";\r\n";
-  result += "    var validCharacterString = \"0123456789-.\";\r\n";
-  result += "    var valid = false;\r\n";
-  result += "      var currentChar = component.value.charAt(component.value.length - 1);\r\n";
-  result += "      if (validCharacterString.indexOf(currentChar) > -1) {\r\n";
-  result += "    valid = true;\r\n";
-  result += "    };\r\n";
-  result += "      if ( (component.value.indexOf(\".-\") > -1) ||\r\n";
-  result += "           (component.value.indexOf(\"--\") > -1) ||\r\n";
-  result += "           (component.value.indexOf(\"..\") > -1) ||\r\n";
-  result += "           (component.value.indexOf(\"-.\") > -1) ) {\r\n";
-  result += "          valid = false;\r\n";
-  result += "      }\r\n";
-  result += "    if (valid) {\r\n";
-  result += "      document.getElementById(messageId).innerHTML = \"\";\r\n";
-  result += "    }\r\n";
-  result += "    else {\r\n";
-  result += "    document.getElementById(messageId).innerHTML = message;\r\n";
-  result += "    }\r\n";
-  result += "    document.getElementById(buttonId).disabled = !valid;\r\n";
-  result += "    return valid;\r\n";
-  result += "  }\r\n";
-  result += "\r\n";
   result += "  function checkNumber(component, messageId, message) {\r\n";
   result += "    var buttonId = component.parentNode.id + \"Button\";\r\n";
   result += "  //var validCharacterString = \"0123456789-.\";\r\n";
@@ -353,22 +327,14 @@ void device(ESP8266WebServer &server, Settings * pSettings)
   result += "  function saveDevice(content) {\r\n";
   result += "        var children = content.parentNode.childNodes;\r\n";
   result += "        var startWiFiMode = \"\";\r\n";
-  result += "        var counter = \"\";\r\n";
-  result += "        var ratio = \"\";\r\n";
   result += "        for (var i = 0; i < children.length; i++) {\r\n";
   result += "            if (children[i].name == \"startWiFiMode\") {\r\n";
   result += "                if (children[i].checked == true) {\r\n";
   result += "                    startWiFiMode = children[i].value || true;\r\n";
   result += "                }\r\n";
   result += "            }\r\n";
-  result += "            if (children[i].name == \"counter\") {\r\n";
-  result += "                counter = children[i].value || \"\";\r\n";
-  result += "            }\r\n";
-  result += "            if (children[i].name == \"ratio\") {\r\n";
-  result += "                ratio = children[i].value || \"\";\r\n";
-  result += "            }\r\n";
   result += "        }\r\n";
-  result += "        var params = \"name=device\" + \"&startWiFiMode=\" + startWiFiMode + \"&counter=\" + counter + \"&ratio=\" + ratio;\r\n";
+  result += "        var params = \"name=device\" + \"&startWiFiMode=\" + startWiFiMode;\r\n";
   result += "        sendData(params);\r\n";
   result += "  }\r\n";
   result += "\r\n";
@@ -408,7 +374,6 @@ void device(ESP8266WebServer &server, Settings * pSettings)
   result += "        var children = content.parentNode.childNodes;\r\n";
   result += "        var targetServer = \"\";\r\n";
   result += "        var targetPort = \"\";\r\n";
-  result += "        var ratio = \"\";\r\n";
   result += "        for (var i = 0; i < children.length; i++) {\r\n";
   result += "            if (children[i].name == \"targetServer\") {\r\n";
   result += "                targetServer = children[i].value || \"\";\r\n";
@@ -511,7 +476,7 @@ void wifi(ESP8266WebServer &server, Settings * pSettings, WiFiSettings * pWiFiSe
   result += "<div id=\"ap\">\r\n";
   result += "  Clients can get access to this Access Point using the SSID and password entered below\r\n";
   result += "  <br>\r\n";
-  result += "  An empty SSID will result in a default SSID for the Counter\r\n";
+  result += "  An empty SSID will result in a default SSID for the Model\r\n";
   result += "  <br>\r\n";
   result += "  An empty password will result in an unencrypted, open Access Point\r\n";
   result += "  <br>\r\n";
@@ -765,65 +730,6 @@ void sse(ESP8266WebServer &server, Settings * pSettings, uint32_t revolutions, u
 }
 
 ///////////////// Vanaf hier Nederlands ///////////////////////////
-void countPage_nl(ESP8266WebServer &server, Settings * pSettings)
-{
-  String result = "<!DOCTYPE HTML>\r\n<html>\r\n";
-  result += "<head>\r\n";
-  result += "<meta charset=\"utf-8\">\r\n";
-  result += "<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\r\n";
-  result += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\r\n";
-  result += "<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->\r\n";
-  result += "<link rel='icon' type='image/png' href='data:image/png;base64,iVBORw0KGgo='>\r\n";
-  result += "<title>model</title>\r\n";
-  result += "</head>\r\n";
-  result += "<body>\r\n";
-  result += "Teller van de sensor: \r\n";
-  result += "<span id='rawCounter'>-</span>\r\n";
-  result += "<br>\r\n";
-  result += "<br>\r\n";
-  result += "<!-- ratio is 1:\r\n";
-  result += "<span id='ratio'>-</span>\r\n";
-  result += "<br>\r\n";
-  result += "<br>-->\r\n";
-  result += "Teller van wiekenas omwentelingen: \r\n";
-  result += "<h2><span id='revolutions'>-</span></h2>\r\n";
-  result += "<br>\r\n";
-  result += "Aantal enden per minuut: \r\n";
-  result += "<h2><span id='viewPulsesPerMinute'>-</span></h2>\r\n";
-  result += "<br>\r\n";
-  result += "<div id='message'></div>\r\n";
-  result += "<br>\r\n";
-  result += "<br>\r\n";
-  result += "<a href='/help/'>Ga naar de begin/help pagina</a>\r\n";
-  result += "<script>\r\n";
-  result += "if(typeof(EventSource) !== 'undefined') {\r\n";
-  //result += "    document.getElementById('result').innerHTML = 'sse event is supported'\r\n";
-  result += "    var source = new EventSource('/data.sse/');\r\n";
-  result += "    source.onmessage = function (e) {\r\n";
-  result += "        try {\r\n";
-  result += "            result = JSON.parse(e.data);\r\n";
-  result += "            document.getElementById('revolutions').innerHTML = result.revolutions;\r\n";
-  result += "            document.getElementById('rawCounter').innerHTML = result.rawCounter;\r\n";
-  result += "            document.getElementById('viewPulsesPerMinute').innerHTML = result.viewPulsesPerMinute;\r\n";
-  result += "            //document.getElementById('ratio').innerHTML = result.ratio;\r\n";
-  result += "        }\r\n";
-  result += "        catch (err) {\r\n";
-  result += "            console.log('Error: ' + err)\r\n";
-  result += "        }\r\n";
-  result += "    }\r\n";
-  result += "} else {\r\n";
-  result += "    document.getElementById('message').innerHTML = 'Deze browser heeft Server-Sent Event support, pagina handmatig verversen dus'\r\n";
-  result += "}\r\n";
-  result += "</script>\r\n";
-  result += "\r\n</body>\r\n</html>\r\n";
-
-  //server.sendHeader("Content-Type", "text/html");
-   server.sendHeader("Cache-Control", "no-cache");
-   server.sendHeader("Connection", "keep-alive");
-   server.sendHeader("Pragma", "no-cache");
-   server.send(200, "text/html", result);
-}
-
 void showWiFiMode_nl(ESP8266WebServer &server, Settings * pSettings)
 {
   String result = "<!DOCTYPE HTML>\r\n<html>\r\n";
@@ -867,13 +773,13 @@ void help_nl(ESP8266WebServer &server, Settings * pSettings)
   {
     result += "Access Point\r\n";
     result += "<br>\r\n";
-    result += "(url: <a href='http://molen.local/' target='_blank'>molen.local</a> of <a href='http://192.168.4.1/' target='_blank'>http://192.168.4.1</a>)\r\n";
+    result += "(url: <a href='http://model.local/' target='_blank'>model.local</a> of <a href='http://192.168.4.1/' target='_blank'>http://192.168.4.1</a>)\r\n";
   }
   else
   {
     result += "Netwerk Station\r\n";
     result += "<br>\r\n";
-    result += "(url: <a href='http://molen.local/' target='_blank'>molen.local</a> of via een lokaal IP adres, laatst bekende adres is: <a href='http://";
+    result += "(url: <a href='http://model.local/' target='_blank'>model.local</a> of via een lokaal IP adres, laatst bekende adres is: <a href='http://";
     result += pSettings->getLastNetworkIP();
     result += "/' target='_blank'>";
     result += pSettings->getLastNetworkIP();
@@ -891,61 +797,13 @@ void help_nl(ESP8266WebServer &server, Settings * pSettings)
 
   result += "Menu\n";
   result += "<br><br><br>\r\n";
-  result += "<a href='/count/'>Teller</a> tellerstanden en aantal enden per minuut\r\n";
-  result += "<br><br>\r\n";
   result += "<a href='/help/'>help</a> begin/help scherm\r\n";
   result += "<br><br>\r\n";
-  result += "<a href='/device/'>Teller instellingen</a> ratio, WiFi modus, Server instellingen\r\n";
+  result += "<a href='/device/'>Model instellingen</a> WiFi modus, Server instellingen\r\n";
   result += "<br><br>\r\n";
-  result += "<a href='/wifi/'>WiFi</a> instellingen om de Teller te koppelen aan WiFi\r\n";
+  result += "<a href='/wifi/'>WiFi</a> instellingen om het Model te koppelen aan WiFi\r\n";
   result += "<br><br>\r\n";
-  /*
-  result += "<a href='/ap/'>access point</a> stel de Teller in als Access Point (url: <a href='http://molen.local/' target='_blank'>molen.local</a> of <a href='http://192.168.4.1/' target='_blank'>http://192.168.4.1</a>)\r\n";
-  result += "<br><br>\r\n";
-  result += "<a href='/network/'>netwerk station</a> stel de Teller in als onderdeel van een WiFi netwerk (url: <a href='http://molen.local/' target='_blank'>molen.local</a> of via een lokaal IP adres, laatst bekende adres is: <a href='http://";
-  result += pSettings->getLastNetworkIP();
-  result += "/' target='_blank'>";
-  result += pSettings->getLastNetworkIP();
-  result += "</a>\r\n";
-  result += ")\r\n";
 
-  result += "<br><br>\r\n";
-  */
-  // url-commands
-  /*
-  result += "&nbsp;&nbsp;/settings/&nbsp;&nbsp;alter settings with arguments\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;/getSettings/&nbsp;&nbsp;view current saved settings\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;/saveSettings/&nbsp;&nbsp;save current settings\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;/initSettings/&nbsp;&nbsp;give settings factory values\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;/eraseSettings/&nbsp;&nbsp;erase settings\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;/reset/&nbsp;&nbsp;reset WiFi settings\r\n";
-  result += "<br>\r\n";
-  result += "<a href='/data.sse/' target='_blank'>/data.sse/</a> geeft streaming data in SSE format, ververstijd is ";
-  result += String(pSettings->SSE_RETRY);
-  result += " ms\r\n";
-  */
-  /*
-  result += "<br><br>\r\n";
-  result += "Valid arguments after /settings/?\r\n";
-  result += "<br><br>\r\n";
-  result += "&nbsp;&nbsp;ratio, used to calculate the measures to revolutions of the first axis\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;&nbsp;&nbsp;Start at the blades side. Give the number of blades, the number of gear teeth of all wheels you encounter until (inclusive) you come to the wheel where the sensor is located and divide them with a point-character\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;&nbsp;&nbsp;For wheels ont the same axis, change the point-character into a minus-character\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;&nbsp;&nbsp;Example:\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;&nbsp;&nbsp;4.72.33.80.24 means: 4 blades and 4 gears to the sensor\r\n";
-  result += "<br>\r\n";
-  result += "&nbsp;&nbsp;&nbsp;&nbsp;4-72.33-80.24 means: 4 blades and 1st gear on the same axis. Second and third gear also on the same axis. Fourth gear has the sensor\r\n";
-  result += "<br>\r\n";
-  */
   result += "<script>\r\n";
   result += "  document.getElementById(\"version\").innerHTML = \"";
   result += pSettings->getFirmwareVersion();
@@ -1053,7 +911,7 @@ void device_nl(ESP8266WebServer &server, Settings * pSettings)
   result += "<body>\r\n";
   result += "Instellingen voor het Model\r\n";
   result += "<br><br>\r\n";
-  result += "<input type=\"radio\" name=\"settings\" onclick=\"displaySettings()\" value=\"device\" checked>Teller\r\n";
+  result += "<input type=\"radio\" name=\"settings\" onclick=\"displaySettings()\" value=\"device\" checked>Model\r\n";
   result += "<br>\r\n";
   result += "<input type=\"radio\" name=\"settings\" onclick=\"displaySettings()\" value=\"targetServer\">Server instellingen\r\n";
   result += "<br>\r\n";
@@ -1072,7 +930,6 @@ void device_nl(ESP8266WebServer &server, Settings * pSettings)
   result += (pSettings->beginAsAccessPoint() == true)?"":"checked";
   result += "> start als Netwerk Station\r\n";
   result += "    <br><br>\r\n";
-  result += "  <span id=\"ratioMessage\"></span><br><br>\r\n";
   result += "  Na 'Save' even geduld tot er een bevestiging is.\r\n";
   result += "  <br>\r\n";
   result += "  <input id=\"deviceButton\" type=\"button\" name=\"deviceButton\" value=\"Save\" onclick=\"saveDevice(this)\">\r\n";
@@ -1195,7 +1052,6 @@ void device_nl(ESP8266WebServer &server, Settings * pSettings)
   result += "        var children = content.parentNode.childNodes;\r\n";
   result += "        var targetServer = \"\";\r\n";
   result += "        var targetPort = \"\";\r\n";
-  result += "        var ratio = \"\";\r\n";
   result += "        for (var i = 0; i < children.length; i++) {\r\n";
   result += "            if (children[i].name == \"targetServer\") {\r\n";
   result += "                targetServer = children[i].value || \"\";\r\n";
