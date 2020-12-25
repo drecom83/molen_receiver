@@ -222,7 +222,7 @@ void device(ESP8266WebServer &server, Settings * pSettings)
   result += "    <br>\r\n";
   result += "    Port: <input type=\"text\" name=\"targetPort\" min=\"0\" max=\"65536\" maxlength=\"5\" size=\"6\" placeholder=\"port\" title=\"0 - 65536\" value=\"";
   result += String(pSettings->getTargetPort());
-  result += "\"  onkeyup=\"checkNumber(this, 'portMessage', 'Invalid counter (0 - 65536)');\">\r\n";
+  result += "\"  onkeyup=\"checkNumber(this, 'portMessage', 'Invalid number (0 - 65536)');\">\r\n";
   result += "    <input id=\"targetPort\" type=\"button\" onclick=\"factorySetting(this)\" reset=\"";
   result += String(pSettings->getFactoryTargetPort());
   result += "\" value=\"reset\">\r\n";
@@ -949,7 +949,7 @@ void device_nl(ESP8266WebServer &server, Settings * pSettings)
   result += "    <br>\r\n";
   result += "    Poort: <input type=\"text\" name=\"targetPort\" min=\"0\" max=\"65536\" maxlength=\"5\" size=\"6\" placeholder=\"poort\" title=\"0 - 65536\" value=\"";
   result += String(pSettings->getTargetPort());
-  result += "\"  onkeyup=\"checkNumber(this, 'portMessage', 'Invalid counter (0 - 65536)');\">\r\n";
+  result += "\"  onkeyup=\"checkNumber(this, 'portMessage', 'Ongeldig getal (0 - 65536)');\">\r\n";
   result += "    <input id=\"targetPort\" type=\"button\" onclick=\"factorySetting(this)\" reset=\"";
   result += String(pSettings->getFactoryTargetPort());
   result += "\" value=\"reset\">\r\n";

@@ -109,6 +109,7 @@ void setupWiFi(){
   if (myssid == "")
   {
     myssid = "ESP-" + WiFi.macAddress();
+    pWifiSettings->setAccessPointSSID(myssid);
   }
 
   IPAddress local_IP(192,168,4,1);
@@ -392,7 +393,7 @@ String updateFirmware()
 {
   String serverUrl = pSettings->getTargetServer();
   uint16_t serverPort = pSettings->getTargetPort();
-  String uploadScript = "/updateFirmware/";
+  String uploadScript = "/updateFirmware/?device=model";
   String version = pSettings->getFirmwareVersion();
   Serial.println(serverUrl);
   Serial.println(serverPort);
@@ -488,6 +489,40 @@ void alive() {
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Access-Control-Allow-Origin", allowServer);
   server.send(200, "text/html", result);
+}
+
+void handleRoleModel() {
+  //uint8_t argumentCounter = 0;
+  String result = "";
+  String result_nl = "";
+
+  if (server.method() == HTTP_GET)
+  {
+    //argumentCounter = server.args();  // if argumentCounter > 0 then save
+    String roleModel = "";
+    for (uint8_t i=0; i< server.args(); i++){
+      if (server.argName(i) == "id") {
+        roleModel = server.arg(i);
+        pSettings->setRoleModel(roleModel);
+        result += "rolemodel is saved";
+        result_nl += "rolmodel is opgeslagen";
+      }
+    }
+  }
+  if (pSettings->getLanguage() == "NL")
+  {
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("Connection", "keep-alive");
+    server.sendHeader("Pragma", "no-cache");
+    server.send(200, "text/plain", result_nl);
+  }
+  else
+  {
+    server.sendHeader("Cache-Control", "no-cache");
+    server.sendHeader("Connection", "keep-alive");
+    server.sendHeader("Pragma", "no-cache");
+    server.send(200, "text/plain", result);
+  }
 }
 
 void showSettings() {
@@ -769,6 +804,7 @@ void initServer()
   // data handler
   server.on("/data.sse/", handleSse);
 
+  server.on("/setRoleModel/", handleRoleModel);
   // url-commands, not used in normal circumstances
   server.on("/ap/", switchToAccessPoint);
   server.on("/network/", switchToNetwork);

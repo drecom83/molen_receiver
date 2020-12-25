@@ -27,6 +27,10 @@ String getSendData(Settings * pSettings, String macAddress) {
   result += "\"macAddress\":";
   result += "\"";
   result += macAddress;
+  result += "\",";
+  result += "\"roleModel\":";
+  result += "\"";
+  result += pSettings->getRoleModel();
   result += "\"";
   result += "}";
   result += "}";
