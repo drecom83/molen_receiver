@@ -57,7 +57,7 @@ public:
         this->setAccessPointSSID(String("ESP-" + WiFi.macAddress()));
         this->setAccessPointPassword("");
         this->saveAuthorizationAccessPoint();
-      };
+      }
     }
   };
 

@@ -16,7 +16,7 @@ private:
   /* 4 bytes to store, version of this firmware */
   uint8_t major = 0;   // max 2^8 = 256
   uint8_t minor = 0;   // max 2^8 = 256
-  uint16_t patch = 0;  // max 2^16 = 65536
+  uint16_t patch = 1;  // max 2^16 = 65536
 
   /* start as Access Point or as Network client */
   bool startAsAccessPoint = false;
@@ -77,9 +77,9 @@ private:
   String lastNetworkIP = "Unknown";
 
   /* roleModel, this is where the model gets the data from, max size = 32 */
-  String roleModel = "Free";
+  String roleModel = "None";
   /* factoryRoleModel, this is where the model gets the data from, max size = 32 */
-  String factoryRoleModel = "Free";  // Free means no roleModel defined
+  String factoryRoleModel = "None";  // None means no roleModel defined
 
 public:
   Settings()

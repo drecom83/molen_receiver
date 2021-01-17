@@ -1,19 +1,24 @@
 #include "handleHTTPClient.h"
 
 long lastSendMillis = millis();                // part of the period for sending data to the target server
+HTTPClient httpClient;    //Declare object of class HTTPClient
 
 
 /* send data to target server using ESP8266HTTPClient */
-void handleHTTPClient(WiFiClient wifiClient, Settings * pSettings, String macAddress)
+String handleHTTPClient(WiFiClient wifiClient, Settings * pSettings, String macAddress)
   {
+    String response = "";
     long currentMillis = millis();
 
     // send data to the target server to check macaddress and devicekey of client
     if (currentMillis - lastSendMillis > pSettings->getSEND_PERIOD())
     {
-      sendDataToTarget(wifiClient, pSettings, macAddress);
+      response = sendDataToTarget(wifiClient, pSettings, macAddress);
       lastSendMillis = currentMillis;
+      Serial.println(response);
+      return response;
     }
+    return "";
   }
 
 // start client to send data to the server (to check autorisation)
@@ -33,13 +38,12 @@ String getSendData(Settings * pSettings, String macAddress) {
   result += pSettings->getRoleModel();
   result += "\"";
   result += "}";
-  result += "}";
+  result += "}\n";  // for the writestream
   return result;
 }
 
-void sendDataToTarget(WiFiClient wifiClient, Settings * pSettings, String macAddress)
+String sendDataToTarget(WiFiClient wifiClient, Settings * pSettings, String macAddress)
 {
-  HTTPClient httpClient;    //Declare object of class HTTPClient
   //String targetServer = "10.0.0.51";
   //uint16_t port = 8085;
   //String path = "/";
@@ -55,6 +59,8 @@ void sendDataToTarget(WiFiClient wifiClient, Settings * pSettings, String macAdd
   httpClient.addHeader("Cache-Control", "no-cache");
   httpClient.addHeader("Connection", "keep-alive");
   httpClient.addHeader("Pragma", "no-cache");
+ 
+  //httpClient.setReuse(true);
 
   String post = getSendData(pSettings, macAddress);
   httpClient.POST(post);   //Send the request
@@ -69,8 +75,8 @@ void sendDataToTarget(WiFiClient wifiClient, Settings * pSettings, String macAdd
   //Serial.println(url);
   //Serial.println(post);
   //Serial.println(httpCode);   //Print HTTP return code
-  Serial.println(payload);    //Print request response payload
 
   httpClient.end();  //Close connection
+  return payload;
 }
 // end client

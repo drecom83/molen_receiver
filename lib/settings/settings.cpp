@@ -44,6 +44,7 @@ String Settings::getRoleModel()
 void Settings::setRoleModel(String roleModel)
 {
   this->roleModel = roleModel;
+  this->saveConfigurationSettings();
 }
 
 uint8_t Settings::atoi8_t(String s) 

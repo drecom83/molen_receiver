@@ -11,7 +11,28 @@
 #include "handleWebServer.h"
 #include "handleHTTPClient.h"
 #include "WiFiSettings.h"
+#include <AccelStepper.h>
 
+const uint16_t ADC_RESOLUTION = 1023;  // 10-bit-ADC
+// stepsPerRevolution for your motor 28BYJ-48 is 2038
+const int16_t stepsPerRevolution = 2038;  // change this to fit the number of steps per revolution
+
+const int motorPin1 = D0;   // IN1
+const int motorPin2 = D5;   // IN2
+const int motorPin3 = D6;   // IN3
+const int motorPin4 = D7;   // IN4
+
+const uint8_t MAX_CPM = 255;
+const int16_t MAX_SPEED = 1000;
+int16_t motorSpeedStepper = 0;
+int16_t previousMotorSpeedStepper = motorSpeedStepper;
+
+AccelStepper myStepper(AccelStepper::HALF4WIRE, motorPin1, motorPin3, motorPin2, motorPin4);
+
+// For normal DC motor
+uint16_t motorSpeedDC = 0;
+const int MOTOR_PWM_BACKWARD = D3;
+const int MOTOR_PWM_FORWARD = D4;
 // WIFI URL: http://192.168.4.1/ or http://model.local/
 /////////////////////
 // Pin Definitions //
@@ -23,11 +44,11 @@
 
 // D5 gives troubles when it is high at the start.
 
-const uint8_t BUTTON = D7;          // Digital pin to read button-push
-const uint8_t BLUE_LED = D4;
-const uint8_t YELLOW_1_LED = D3;
-const uint8_t YELLOW_2_LED = D2;
-const uint8_t YELLOW_3_LED= D1;
+const uint8_t BUTTON = D8;          // Digital pin to read button-push
+
+// brightness of om analog pin
+const uint8_t LED_1 = D1;
+const uint8_t LED_2 = D2;
 
 const uint32_t RELAX_PERIOD = 2;    // Is also a small energy saving, in milliseconds
 const uint32_t TOO_LONG = 60000;    // after this period the pulsesPerMinute = 0 (in milliseconds)
@@ -98,9 +119,8 @@ void initSettings() {
 // end Settings and EEPROM stuff
 
 void setupWiFi(){
-  digitalWrite(YELLOW_1_LED, LOW);
-  digitalWrite(YELLOW_2_LED, HIGH);
-  digitalWrite(YELLOW_3_LED, LOW);
+  digitalWrite(LED_1, HIGH);
+  digitalWrite(LED_2, HIGH);
 
   WiFi.mode(WIFI_AP);
   String myssid = pWifiSettings->readAccessPointSSID();
@@ -128,8 +148,8 @@ void setupWiFi(){
   Serial.println(WiFi.softAPIP());
   Serial.println(WiFi.softAPmacAddress());
 
-  digitalWrite(YELLOW_1_LED, HIGH);
-  digitalWrite(YELLOW_2_LED, LOW);
+  digitalWrite(LED_1, HIGH);
+  digitalWrite(LED_2, LOW);
   
   pSettings->beginAsAccessPoint(true);
 }
@@ -137,9 +157,8 @@ void setupWiFi(){
 void setupWiFiManager () {
   bool networkConnected = false;
 
-  digitalWrite(YELLOW_1_LED, LOW);
-  digitalWrite(YELLOW_2_LED, HIGH);
-  digitalWrite(YELLOW_3_LED, LOW);
+  digitalWrite(LED_1, HIGH);
+  digitalWrite(LED_2, HIGH);
 
   String mynetworkssid = pWifiSettings->readNetworkSSID();
   if (mynetworkssid != "") {
@@ -167,8 +186,8 @@ void setupWiFiManager () {
       networkConnected = true;
       pSettings->setLastNetworkIP(WiFi.localIP().toString());
 
-      digitalWrite(YELLOW_2_LED, LOW);
-      digitalWrite(YELLOW_3_LED, HIGH);
+      digitalWrite(LED_1, LOW);
+      digitalWrite(LED_2, HIGH);
       pSettings->beginAsAccessPoint(false);
     }
   }
@@ -211,16 +230,7 @@ void switchToAccessPoint() {
 
   initServer();
 
-  // start domain name server check
-  /*
-    mdns.close();
-    while (mdns.begin("molen", WiFi.softAPIP())) {
-      Serial.println("MDNS responder started");
-      mdns.addService("http", "tcp", 80);
-    }
-  */
   mDNSnotifyAPChange();
-  //startmDNS();
   // end domain name server check
 }
 
@@ -238,22 +248,16 @@ void switchToNetwork() {
   delay(pSettings->WAIT_PERIOD);
   initServer();
 
-  /*
-  mdns.close();
-  while (mdns.begin("molen", WiFi.localIP())) {
-    Serial.println("MDNS responder started");
-    mdns.addService("http", "tcp", 80);
-  }
-  */
   mDNSnotifyAPChange();
 
-  //startmDNS();
 }
 
+/*
 void writeResult(WiFiClient wifiClient, String result) {
   wifiClient.print(result);
   wifiClient.flush();
 }
+*/
 
 /* flashes PIN, unit is milliseconds (0-256) */
 void flashPin(uint8_t pin, uint8_t ms) {
@@ -482,8 +486,15 @@ void alive() {
   */
   result += firstFreeHostname;
   result += "\r\n";
-  Serial.println(result);
+
   String allowServer = pSettings->getTargetServer() + ":" + pSettings->getTargetPort();
+  Serial.println(pSettings->getTargetServer());
+  Serial.println(pSettings->getTargetPort());
+  if ((pSettings->getTargetPort() == 80) || (pSettings->getTargetPort() == 443))
+  {
+    allowServer = pSettings->getTargetPort();
+  } 
+  Serial.println(allowServer);
   server.sendHeader("Cache-Control", "no-cache");
   server.sendHeader("Connection", "keep-alive");
   server.sendHeader("Pragma", "no-cache");
@@ -756,6 +767,76 @@ void handleDeviceSettings()
   Serial.println(result);
 }
 
+void smoothAcceleration() {
+    if (motorSpeedStepper - previousMotorSpeedStepper > 20)
+    {
+      motorSpeedStepper = previousMotorSpeedStepper + 20;
+      previousMotorSpeedStepper = motorSpeedStepper;
+    }
+    if (previousMotorSpeedStepper - motorSpeedStepper > 20)
+      {
+      motorSpeedStepper = previousMotorSpeedStepper - 20;
+      previousMotorSpeedStepper = motorSpeedStepper;
+    }
+}
+
+String getValueFromJSON(String key, String responseData)
+{
+  int16_t keyIndex = responseData.indexOf(key);
+  if (keyIndex > -1)
+  {
+    int16_t start = responseData.indexOf(":", keyIndex);
+    int16_t end = responseData.indexOf(",", start);
+    if (end == -1) {
+      end = responseData.indexOf("}", start);
+    }
+    String value = responseData.substring(start + 1, end);
+    value.trim();
+    value.replace("\"", "");
+    return value;
+  }
+  return "";
+}
+
+void handleHTTPClientResponse(String responseData) {
+  /* data should come in JSON format */
+
+  String cpm = getValueFromJSON("cpm", responseData);
+  String name = getValueFromJSON("name", responseData);
+
+  motorSpeedStepper = 0;
+
+  if (cpm != "")
+  {
+
+    //Serial.println(cpm);  // prints to default Serial and to Tx
+    // only the cpm is of interest to print
+    // set the motor speed:
+
+    // for stepper motor
+    uint16_t speedValue = (uint16_t)cpm.toInt();
+      if (speedValue < MAX_SPEED) {
+       motorSpeedStepper = speedValue;
+    }
+    else {
+      motorSpeedStepper = MAX_SPEED;
+    }
+    //smoothAcceleration();
+
+    //for dc motor 
+    if (speedValue < MAX_CPM) {
+      motorSpeedDC = map(speedValue, 0, MAX_CPM, 0 , ADC_RESOLUTION);
+    }
+    else {
+      motorSpeedDC = ADC_RESOLUTION;
+    }
+    Serial.println(speedValue);  // prints to default Serial and to Tx
+    Serial.println(motorSpeedDC);  // prints to default Serial and to Tx
+    Serial.println(motorSpeedStepper);  // prints to default Serial and to Tx
+
+  }
+}
+
 void toggleWiFi()
 {
   // only toggle by using the button, not saving in EEPROM
@@ -768,7 +849,7 @@ void toggleWiFi()
   else
   {
     //switchToNetwork();
-    setupWiFiManager();   // part of local network as station
+    setupWiFiManager();             // part of local network as station
   }
 }
 
@@ -776,10 +857,19 @@ void initHardware()
 {
   Serial.begin(115200);
 
-  pinMode(BLUE_LED, OUTPUT);
-  pinMode(YELLOW_1_LED, OUTPUT);
-  pinMode(YELLOW_2_LED, OUTPUT);
-  pinMode(YELLOW_3_LED, OUTPUT);
+  pinMode(LED_1, OUTPUT);
+  pinMode(LED_2, OUTPUT);
+
+  pinMode(MOTOR_PWM_BACKWARD, OUTPUT);
+  pinMode(MOTOR_PWM_FORWARD, OUTPUT);
+
+  analogWrite(MOTOR_PWM_BACKWARD, 0);
+  analogWrite(MOTOR_PWM_FORWARD, 0);
+
+  myStepper.setMaxSpeed(MAX_SPEED);
+  myStepper.setSpeed(0);
+  //pinMode(YELLOW_2_LED, OUTPUT);
+  //pinMode(YELLOW_3_LED, OUTPUT);
 }
 
 void initServer()
@@ -860,7 +950,6 @@ void setup()
 void loop()
 {
   // update should be run on every loop
-  //mdns.update();
   MDNS.update();
 
   if (detectButtonFlag == true)
@@ -871,12 +960,39 @@ void loop()
 
   // For ESP8266WebServer
   server.handleClient();
-  
+
   // For handleHTTPClient
   if (WiFi.getMode() == WIFI_STA)
   {
+
     /* send data to target server using ESP8266HTTPClient */
-    handleHTTPClient(wifiClient, pSettings, String(WiFi.macAddress()));
+    String response = handleHTTPClient(wifiClient, pSettings, String(WiFi.macAddress()));
+    if (response != "")
+    {
+      handleHTTPClientResponse(response);
+    }
   }
 
+  // Stepper motor
+  if (motorSpeedStepper > 0) {
+
+    myStepper.setSpeed(-motorSpeedStepper);
+  }
+  else
+  {
+    myStepper.setSpeed(0);
+  }
+  myStepper.runSpeed();
+
+  // DC motor
+  if (motorSpeedDC > 0)
+  {
+    analogWrite(MOTOR_PWM_BACKWARD, motorSpeedDC);
+    analogWrite(MOTOR_PWM_FORWARD, 0);
+ } 
+  else
+  {
+    analogWrite(MOTOR_PWM_BACKWARD, 0);
+    analogWrite(MOTOR_PWM_FORWARD, 0);
+  } 
 }
