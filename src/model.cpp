@@ -22,7 +22,7 @@ const int motorPin2 = D5;   // IN2
 const int motorPin3 = D6;   // IN3
 const int motorPin4 = D7;   // IN4
 
-const uint8_t MAX_CPM = 255;
+const uint8_t MAX_CPM = 90; //255;
 const int16_t MAX_SPEED = 1000;
 int16_t motorSpeedStepper = 0;
 int16_t previousMotorSpeedStepper = motorSpeedStepper;
@@ -488,13 +488,13 @@ void alive() {
   result += "\r\n";
 
   String allowServer = pSettings->getTargetServer() + ":" + pSettings->getTargetPort();
-  Serial.println(pSettings->getTargetServer());
-  Serial.println(pSettings->getTargetPort());
+  //Serial.println(pSettings->getTargetServer());
+  //Serial.println(pSettings->getTargetPort());
   if ((pSettings->getTargetPort() == 80) || (pSettings->getTargetPort() == 443))
   {
-    allowServer = pSettings->getTargetPort();
+    allowServer = pSettings->getTargetServer();
   } 
-  Serial.println(allowServer);
+  //Serial.println(allowServer);
   server.sendHeader("Cache-Control", "no-cache");
   server.sendHeader("Connection", "keep-alive");
   server.sendHeader("Pragma", "no-cache");
@@ -814,9 +814,10 @@ void handleHTTPClientResponse(String responseData) {
     // set the motor speed:
 
     // for stepper motor
+    uint8_t stepperSpeedFactor = 15;
     uint16_t speedValue = (uint16_t)cpm.toInt();
-      if (speedValue < MAX_SPEED) {
-       motorSpeedStepper = speedValue;
+      if (speedValue * stepperSpeedFactor < MAX_SPEED) {
+       motorSpeedStepper = speedValue * stepperSpeedFactor;
     }
     else {
       motorSpeedStepper = MAX_SPEED;
@@ -830,9 +831,9 @@ void handleHTTPClientResponse(String responseData) {
     else {
       motorSpeedDC = ADC_RESOLUTION;
     }
-    Serial.println(speedValue);  // prints to default Serial and to Tx
-    Serial.println(motorSpeedDC);  // prints to default Serial and to Tx
-    Serial.println(motorSpeedStepper);  // prints to default Serial and to Tx
+    //Serial.println(speedValue);  // prints to default Serial and to Tx
+    //Serial.println(motorSpeedDC);  // prints to default Serial and to Tx
+    //Serial.println(motorSpeedStepper);  // prints to default Serial and to Tx
 
   }
 }
