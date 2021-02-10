@@ -11,6 +11,11 @@ String Settings::getDeviceKey()
   return this->deviceKey;
 }
 
+void Settings::setDeviceKey(String myDeviceKey)
+{
+  this->deviceKey = myDeviceKey;
+}
+
 uint16_t Settings::getSEND_PERIOD()
 {
   return this->SEND_PERIOD;

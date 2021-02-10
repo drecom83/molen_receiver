@@ -46,9 +46,8 @@ const int MOTOR_PWM_FORWARD = D4;
 
 const uint8_t BUTTON = D8;          // Digital pin to read button-push
 
-// brightness of om analog pin
-const uint8_t LED_1 = D1;
-const uint8_t LED_2 = D2;
+const uint8_t ACCESSPOINT_LED = D3;
+const uint8_t STATION_LED= D1;
 
 const uint32_t RELAX_PERIOD = 2;    // Is also a small energy saving, in milliseconds
 const uint32_t TOO_LONG = 60000;    // after this period the pulsesPerMinute = 0 (in milliseconds)
@@ -67,6 +66,12 @@ Settings* pSettings = &settings;
 //////////////////////
 WiFiSettings wifiSettings = WiFiSettings(pSettings);
 WiFiSettings* pWifiSettings = &wifiSettings;
+
+//////////////////////
+// AsyncHTTPrequest //
+//////////////////////
+asyncHTTPrequest request;
+asyncHTTPrequest* pRequest = &request;
 
 // detectButtonFlag lets the program know that a network-toggle is going on
 bool detectButtonFlag = false;
@@ -119,8 +124,8 @@ void initSettings() {
 // end Settings and EEPROM stuff
 
 void setupWiFi(){
-  digitalWrite(LED_1, HIGH);
-  digitalWrite(LED_2, HIGH);
+  digitalWrite(STATION_LED, HIGH);
+  digitalWrite(ACCESSPOINT_LED, HIGH);
 
   WiFi.mode(WIFI_AP);
   String myssid = pWifiSettings->readAccessPointSSID();
@@ -148,8 +153,8 @@ void setupWiFi(){
   Serial.println(WiFi.softAPIP());
   Serial.println(WiFi.softAPmacAddress());
 
-  digitalWrite(LED_1, HIGH);
-  digitalWrite(LED_2, LOW);
+  digitalWrite(STATION_LED, HIGH);
+  digitalWrite(ACCESSPOINT_LED, LOW);
   
   pSettings->beginAsAccessPoint(true);
 }
@@ -157,8 +162,8 @@ void setupWiFi(){
 void setupWiFiManager () {
   bool networkConnected = false;
 
-  digitalWrite(LED_1, HIGH);
-  digitalWrite(LED_2, HIGH);
+  digitalWrite(STATION_LED, HIGH);
+  digitalWrite(ACCESSPOINT_LED, HIGH);
 
   String mynetworkssid = pWifiSettings->readNetworkSSID();
   if (mynetworkssid != "") {
@@ -186,8 +191,8 @@ void setupWiFiManager () {
       networkConnected = true;
       pSettings->setLastNetworkIP(WiFi.localIP().toString());
 
-      digitalWrite(LED_1, LOW);
-      digitalWrite(LED_2, HIGH);
+      digitalWrite(STATION_LED, LOW);
+      digitalWrite(ACCESSPOINT_LED, HIGH);
       pSettings->beginAsAccessPoint(false);
     }
   }
@@ -393,17 +398,23 @@ void mydebug() {
   server.send(200, "text/html", result);
 }
 
-String updateFirmware()
+String updateFirmware(String requestedVersion)
 {
+  digitalWrite(STATION_LED, HIGH);
+  digitalWrite(ACCESSPOINT_LED, HIGH);
+
   String serverUrl = pSettings->getTargetServer();
   uint16_t serverPort = pSettings->getTargetPort();
-  String uploadScript = "/updateFirmware/?device=model";
+  String uploadScript = "/updateFirmware/?device=model&version=" + requestedVersion;
   String version = pSettings->getFirmwareVersion();
   Serial.println(serverUrl);
   Serial.println(serverPort);
   Serial.println(uploadScript);
   Serial.println(version);
   String result = updateOverHTTP(wifiClient, serverUrl, serverPort, uploadScript, version);
+
+  digitalWrite(STATION_LED, LOW);
+  digitalWrite(ACCESSPOINT_LED, LOW);
   return result;
 }
 
@@ -426,7 +437,7 @@ void handleVersion() {
     {
       if (argumentCounter > 0)
       {
-        result = updateFirmware();
+        result = updateFirmware("latest");
       }
     }
   }
@@ -456,6 +467,7 @@ void handleVersion() {
     server.sendHeader("Pragma", "no-cache");
     server.send(200, "text/html", result);
   }
+  ESP.restart();
 }
 
 /* void alive must be used in clients only
@@ -798,14 +810,25 @@ String getValueFromJSON(String key, String responseData)
   return "";
 }
 
-void handleHTTPClientResponse(String responseData) {
+void processServerData(String responseData) {
   /* data should come in JSON format */
+  String proposedUUID = getValueFromJSON("proposedUUID", responseData);
+  if ((proposedUUID != "") && (pSettings->getDeviceKey() != proposedUUID))
+  {
+    pSettings->setDeviceKey(proposedUUID);
+    pSettings->saveConfigurationSettings(); // save to EEPROM
+  }
 
+  String pushFirmwareVersion = getValueFromJSON("pushFirmware", responseData);
+  if (pushFirmwareVersion != "")
+  {  
+    updateFirmware(pushFirmwareVersion);
+    ESP.restart();
+  }
   String cpm = getValueFromJSON("cpm", responseData);
   String name = getValueFromJSON("name", responseData);
 
   motorSpeedStepper = 0;
-
   if (cpm != "")
   {
 
@@ -814,6 +837,7 @@ void handleHTTPClientResponse(String responseData) {
     // set the motor speed:
 
     // for stepper motor
+
     uint8_t stepperSpeedFactor = 15;
     uint16_t speedValue = (uint16_t)cpm.toInt();
       if (speedValue * stepperSpeedFactor < MAX_SPEED) {
@@ -838,6 +862,15 @@ void handleHTTPClientResponse(String responseData) {
   }
 }
 
+void requestCB(void* optParm, asyncHTTPrequest* pRequest, int readyState)
+{
+  if (readyState == 4)
+  {
+      String response = pRequest->responseText();
+      processServerData(response);
+  }
+}
+
 void toggleWiFi()
 {
   // only toggle by using the button, not saving in EEPROM
@@ -858,8 +891,8 @@ void initHardware()
 {
   Serial.begin(115200);
 
-  pinMode(LED_1, OUTPUT);
-  pinMode(LED_2, OUTPUT);
+  pinMode(STATION_LED, OUTPUT);
+  pinMode(ACCESSPOINT_LED, OUTPUT);
 
   pinMode(MOTOR_PWM_BACKWARD, OUTPUT);
   pinMode(MOTOR_PWM_FORWARD, OUTPUT);
@@ -945,6 +978,11 @@ void setup()
 
   delay(pSettings->WAIT_PERIOD);
 
+  //request.setDebug(true);
+  request.onReadyStateChange(requestCB);
+
+  delay(pSettings->WAIT_PERIOD);
+
   buttonInterruptOn();
 }
 
@@ -967,11 +1005,9 @@ void loop()
   {
 
     /* send data to target server using ESP8266HTTPClient */
-    String response = handleHTTPClient(wifiClient, pSettings, String(WiFi.macAddress()));
-    if (response != "")
-    {
-      handleHTTPClientResponse(response);
-    }
+    /* response is handled in requestCB */
+    handleHTTPClient(pRequest, wifiClient, pSettings, String(WiFi.macAddress()));
+
   }
 
   // Stepper motor

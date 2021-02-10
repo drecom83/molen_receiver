@@ -156,6 +156,9 @@ public:
   /* return deviceKey */
   String getDeviceKey();
 
+  /* set deviceKey without saving it to EEPROM */
+  void setDeviceKey(String myDeviceKey);
+
   /* period for sending data to the target server */
   uint16_t getSEND_PERIOD();
 
