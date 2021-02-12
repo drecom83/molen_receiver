@@ -2,8 +2,7 @@
 #include "base64.h"
 
 long lastSendMillis = millis();                // part of the period for sending data to the target server
-//HTTPClient httpClient;    //Declare object of class HTTPClient
-//String response = "";
+
 
 /* send data to target server using ESP8266HTTPClient */
 void handleHTTPClient(asyncHTTPrequest* pRequest, WiFiClient wifiClient, Settings * pSettings, String macAddress)
@@ -18,7 +17,7 @@ void handleHTTPClient(asyncHTTPrequest* pRequest, WiFiClient wifiClient, Setting
     }
   }
 
-// start client to send data to the server (to check autorisation)
+// start client to send data to the server
 String getSendData(Settings * pSettings, String macAddress) {
   String result = "{";
   result += "\"data\": {";
@@ -42,9 +41,6 @@ String getSendData(Settings * pSettings, String macAddress) {
 
 void sendDataToTarget(asyncHTTPrequest* pRequest, WiFiClient wifiClient, Settings * pSettings, String macAddress)
 {
-  //String targetServer = "10.0.0.51";
-  //uint16_t port = 8085;
-  //String path = "/";
   String targetServer = pSettings->getTargetServer();
   uint16_t port =  pSettings->getTargetPort();
   String path =  pSettings->getTargetPath();
@@ -71,32 +67,4 @@ void sendDataToTarget(asyncHTTPrequest* pRequest, WiFiClient wifiClient, Setting
     pRequest->setReqHeader("Authorization", auth.c_str());
     pRequest->send(post_data);
   }
-
-
-/*
-  httpClient.begin(wifiClient, url);      //Specify request destination
-
-  httpClient.addHeader("Content-Type", "application/json");  //Specify content-type header
-  httpClient.addHeader("Cache-Control", "no-cache");
-  httpClient.addHeader("Connection", "keep-alive");
-  httpClient.addHeader("Pragma", "no-cache");
- 
-  String post = getSendData(pSettings, macAddress);
-  httpClient.POST(post);   //Send the request
-  //int httpCode = httpClient.POST(post);   //Send the request
-  String payload = httpClient.getString();                  //Get the response payload
-
-  // TODO: For authentication/authorisation
-  // TODO: Get the uuid(=deviceKey) from the payload and if it is different than
-  // TODO: the current uuid(=deviceKey) then save the new deviceKey
-  // TODO: The server determines is a deviceKey is valid
-
-  //Serial.println(url);
-  //Serial.println(post);
-  //Serial.println(httpCode);   //Print HTTP return code
-
-  httpClient.end();  //Close connection
-  return payload;
-*/
 }
-// end client

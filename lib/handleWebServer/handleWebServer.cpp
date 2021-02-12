@@ -12,7 +12,7 @@ void showWiFiMode(ESP8266WebServer &server, Settings * pSettings)
   result += "<title>model</title>\r\n";
   result += "</head>\r\n";
   result += "<body>\r\n";
-  result += "Wifi mode is changing while the middle led is on, please wait until it is off and select the right WiFi (SSID) before selecting the home/help page\r\n";
+  result += "WiFi mode is changing if both WiFi leds are on\r\n";
   result += "<br>\r\n";
   result += "<br>\r\n";
   result += "<a href='/help/'>Go to the home/help page</a>\r\n";
@@ -742,7 +742,7 @@ void showWiFiMode_nl(ESP8266WebServer &server, Settings * pSettings)
   result += "<title>model</title>\r\n";
   result += "</head>\r\n";
   result += "<body>\r\n";
-  result += "Wifi modus wijziging is bezig zolang het middelste gele led aan, als het uit is selecteer dan de WiFi (SSID) en daarna de begin/help pagina\r\n";
+  result += "WiFi modus wijziging is bezig zolang beide WiFi leds aan zijn\r\n";
   result += "<br>\r\n";
   result += "<br>\r\n";
   result += "<a href='/help/'>Ga naar de begin/help pagina</a>\r\n";
