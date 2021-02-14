@@ -21,6 +21,10 @@ void handleHTTPClient(asyncHTTPrequest* pRequest, WiFiClient wifiClient, Setting
 String getSendData(Settings * pSettings, String macAddress) {
   String result = "{";
   result += "\"data\": {";
+  result += "\"firmwareVersion\":";
+  result += "\"";
+  result += pSettings->getFirmwareVersion();
+  result += "\",";
   result += "\"deviceKey\":";
   result += "\"";
   result += pSettings->getDeviceKey();
