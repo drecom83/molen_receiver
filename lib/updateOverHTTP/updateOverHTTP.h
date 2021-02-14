@@ -2,6 +2,11 @@
 #define UPATEOVERHTTP_H
 #include <ESP8266WiFi.h>          //ESP8266 Core WiFi Library (you most likely already have this in your sketch)
 
+const String UPDATEOVERHTTP_FAILED ="[update] Update Failed";
+const String UPDATEOVERHTTP_NO_UPDATE = "[update] No Update";
+const String UPDATEOVERHTTP_OK = "[update] Update ok";
+const String UPDATEOVERHTTP_NO_INTERNET = "[update] No connection with the server";
+
 /* 
 serverURL is the hostname
 serverPort the portnumber

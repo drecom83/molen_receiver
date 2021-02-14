@@ -46,8 +46,8 @@ const int MOTOR_PWM_FORWARD = D4;
 
 const uint8_t BUTTON = D8;          // Digital pin to read button-push
 
-const uint8_t ACCESSPOINT_LED = D3;
-const uint8_t STATION_LED= D1;
+const uint8_t ACCESSPOINT_LED = D1;
+const uint8_t STATION_LED= D2;
 
 const uint32_t RELAX_PERIOD = 2;    // Is also a small energy saving, in milliseconds
 const uint32_t TOO_LONG = 60000;    // after this period the pulsesPerMinute = 0 (in milliseconds)
@@ -75,6 +75,13 @@ asyncHTTPrequest* pRequest = &request;
 
 // detectButtonFlag lets the program know that a network-toggle is going on
 bool detectButtonFlag = false;
+
+// detectUpdateFlag is True is an update from the server is requested
+bool detectUpdateFlag = false;
+
+// updateSucceeded is true is the update succeeded, so a restart can be done
+bool updateSucceeded = false;
+
 
 // Forward declaration
 void setupWiFi();
@@ -153,9 +160,9 @@ void setupWiFi(){
   Serial.println(WiFi.softAPIP());
   Serial.println(WiFi.softAPmacAddress());
 
-  digitalWrite(STATION_LED, HIGH);
-  digitalWrite(ACCESSPOINT_LED, LOW);
-  
+  digitalWrite(ACCESSPOINT_LED, HIGH);
+  digitalWrite(STATION_LED, LOW);
+
   pSettings->beginAsAccessPoint(true);
 }
 
@@ -191,8 +198,8 @@ void setupWiFiManager () {
       networkConnected = true;
       pSettings->setLastNetworkIP(WiFi.localIP().toString());
 
-      digitalWrite(STATION_LED, LOW);
-      digitalWrite(ACCESSPOINT_LED, HIGH);
+      digitalWrite(ACCESSPOINT_LED, LOW);
+      digitalWrite(STATION_LED, HIGH);
       pSettings->beginAsAccessPoint(false);
     }
   }
@@ -400,6 +407,8 @@ void mydebug() {
 
 String updateFirmware(String requestedVersion)
 {
+  buttonInterruptOff();
+
   digitalWrite(STATION_LED, HIGH);
   digitalWrite(ACCESSPOINT_LED, HIGH);
 
@@ -407,12 +416,29 @@ String updateFirmware(String requestedVersion)
   uint16_t serverPort = pSettings->getTargetPort();
   String uploadScript = "/update/updateFirmware/?device=model&version=" + requestedVersion;
   String version = pSettings->getFirmwareVersion();
-  Serial.println(serverUrl);
-  Serial.println(serverPort);
-  Serial.println(uploadScript);
-  Serial.println(version);
   String result = updateOverHTTP(wifiClient, serverUrl, serverPort, uploadScript, version);
 
+  if (result ==UPDATEOVERHTTP_OK)
+  {
+    updateSucceeded = true;
+  }
+  else
+  {
+    // restore settings
+    buttonInterruptOn();
+    if (WiFi.getMode() == WIFI_STA)
+    {
+      digitalWrite(STATION_LED, HIGH);
+      digitalWrite(ACCESSPOINT_LED, LOW);
+    }
+    else
+    {
+      digitalWrite(STATION_LED, LOW);
+      digitalWrite(ACCESSPOINT_LED, HIGH);
+    }
+  return result;
+  }
+  
   digitalWrite(STATION_LED, LOW);
   digitalWrite(ACCESSPOINT_LED, LOW);
   return result;
@@ -438,20 +464,28 @@ void handleVersion() {
       if (argumentCounter > 0)
       {
         result = updateFirmware("latest");
+        if (result == UPDATEOVERHTTP_OK)
+        {
+          updateSucceeded = true;
+        }
       }
     }
   }
   if (pSettings->getLanguage() == "NL")
   {
-    if (result.indexOf("failed") > -1)
+    if (result == UPDATEOVERHTTP_FAILED)
     {
       result_nl = "[update] Update mislukt";
     }
-    if (result.indexOf("no Update") > -1)
+    if (result == UPDATEOVERHTTP_NO_UPDATE)
     {
       result_nl = "[update] Geen update aanwezig";
     }
-    if (result.indexOf("ok") > -1)
+    if (result == UPDATEOVERHTTP_NO_INTERNET)
+    {
+      result_nl = "[update] Geen connectie met de server aanwezig";
+    }
+    if (result == UPDATEOVERHTTP_OK)
     {
       result_nl = "[update] Update ok";
     }
@@ -467,7 +501,6 @@ void handleVersion() {
     server.sendHeader("Pragma", "no-cache");
     server.send(200, "text/html", result);
   }
-  ESP.restart();
 }
 
 /* void alive must be used in clients only
@@ -822,11 +855,14 @@ void processServerData(String responseData) {
   String pushFirmwareVersion = getValueFromJSON("pushFirmware", responseData);
   if (pushFirmwareVersion != "")
   {  
-    updateFirmware(pushFirmwareVersion);
-    ESP.restart();
+    detectUpdateFlag = true;
   }
   String cpm = getValueFromJSON("cpm", responseData);
-  String name = getValueFromJSON("name", responseData);
+  
+  // TODO: could be used on a display:
+  //String name = getValueFromJSON("name", responseData);
+  //String message = getValueFromJSON("message", responseData);
+  // end TODO:
 
   motorSpeedStepper = 0;
   if (cpm != "")
@@ -962,7 +998,7 @@ void setup()
   
   if (pSettings->beginAsAccessPoint())
   {
-  setupWiFi();        // local network as access point
+    setupWiFi();        // local network as access point
   }
   else
   {
@@ -990,6 +1026,17 @@ void loop()
 {
   // update should be run on every loop
   MDNS.update();
+
+  if (detectUpdateFlag == true)
+  {
+    String result = updateFirmware("latest");
+    detectUpdateFlag = false;
+  }
+
+  if (updateSucceeded == true)
+  {
+    ESP.restart();
+  }
 
   if (detectButtonFlag == true)
   {

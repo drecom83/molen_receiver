@@ -11,26 +11,26 @@ String updateOverHTTP(WiFiClient wifiClient, String serverURL, uint16_t serverPo
     {
       serverURL = serverURL.substring(pos + 3);  // get rid of protocol
     }
-    ESPhttpUpdate.rebootOnUpdate(true);
+    ESPhttpUpdate.rebootOnUpdate(false);
     t_httpUpdate_return ret = ESPhttpUpdate.update(wifiClient, serverURL, serverPort, uploadScript, version);
     switch(ret) {
         case HTTP_UPDATE_FAILED:
-            Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-            result += "[update] Update failed";
+            //Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
+            result = UPDATEOVERHTTP_FAILED;
             break;
         case HTTP_UPDATE_NO_UPDATES:
-            Serial.println("[update] Update no Update");
-            result += "[update] Update no Update";
+            //Serial.println("[update] Update no Update");
+            result = UPDATEOVERHTTP_NO_UPDATE;
             break;
         case HTTP_UPDATE_OK:
-            Serial.println("[update] Update ok"); // may not be called since we reboot the ESP
-            result += "[update] Update ok";
+            //Serial.println("[update] Update ok"); // may not be called since we reboot the ESP
+            result = UPDATEOVERHTTP_OK;
             break;
     }
   }
   else {
-    Serial.println("Device must be in station mode");
-    result += "Device is not connected to internet\r\n";
+    //Serial.println("Device must be in station mode");
+    result = UPDATEOVERHTTP_NO_INTERNET;
   }
   return result;
 }
