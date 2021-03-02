@@ -70,8 +70,7 @@ WiFiSettings* pWifiSettings = &wifiSettings;
 //////////////////////
 // AsyncHTTPrequest //
 //////////////////////
-asyncHTTPrequest request;
-asyncHTTPrequest* pRequest = &request;
+asyncHTTPrequest aRequest;
 
 // detectButtonFlag lets the program know that a network-toggle is going on
 bool detectButtonFlag = false;
@@ -898,15 +897,6 @@ void processServerData(String responseData) {
   }
 }
 
-void requestCB(void* optParm, asyncHTTPrequest* pRequest, int readyState)
-{
-  if (readyState == 4)
-  {
-      String response = pRequest->responseText();
-      processServerData(response);
-  }
-}
-
 void toggleWiFi()
 {
   // only toggle by using the button, not saving in EEPROM
@@ -986,6 +976,26 @@ void initServer()
   Serial.println("HTTP server started");
 }
 
+
+void requestCB(void* optParm, asyncHTTPrequest* request, int readyState){
+  if (readyState == 4)
+  {
+    if (request->responseHTTPcode() == 200)
+    {
+      String response = request->responseText();
+      //Serial.println(response);
+      processServerData(response);
+    }
+    else
+    {
+      if (request->responseHTTPcode() > 0)
+      {
+        //Serial.println(request->responseText());
+      }
+    }
+  }
+}
+
 void setup()
 {
   /* It seems to help preventing ESPerror messages with mode(3,6) when
@@ -1014,8 +1024,8 @@ void setup()
 
   delay(pSettings->WAIT_PERIOD);
 
-  //request.setDebug(true);
-  request.onReadyStateChange(requestCB);
+  //aRequest.setDebug(true);
+  aRequest.onReadyStateChange(requestCB);
 
   delay(pSettings->WAIT_PERIOD);
 
@@ -1050,11 +1060,9 @@ void loop()
   // For handleHTTPClient
   if (WiFi.getMode() == WIFI_STA)
   {
-
     /* send data to target server using ESP8266HTTPClient */
     /* response is handled in requestCB */
-    handleHTTPClient(pRequest, wifiClient, pSettings, String(WiFi.macAddress()));
-
+    handleHTTPClient(aRequest, wifiClient, pSettings, String(WiFi.macAddress()));
   }
 
   // Stepper motor
@@ -1078,5 +1086,5 @@ void loop()
   {
     analogWrite(MOTOR_PWM_BACKWARD, 0);
     analogWrite(MOTOR_PWM_FORWARD, 0);
-  } 
+  }
 }
