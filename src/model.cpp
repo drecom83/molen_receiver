@@ -49,6 +49,11 @@ const uint8_t BUTTON = D8;          // Digital pin to read button-push
 const uint8_t ACCESSPOINT_LED = D1;
 const uint8_t STATION_LED= D2;
 
+// variables for reset to STA mode
+const uint16_t NO_STA_COUNTER_MAX = 3000; // with a delay of 100 ms the max pause time is 5 minutes
+uint16_t no_sta_counter = 0;
+bool eepromStartModeAP = false;     // see setup, holds the startmode from eeprom
+
 const uint32_t RELAX_PERIOD = 2;    // Is also a small energy saving, in milliseconds
 const uint32_t TOO_LONG = 60000;    // after this period the pulsesPerMinute = 0 (in milliseconds)
 bool permissionToDetect = false;    // all sensors must have had a positive value 
@@ -1006,6 +1011,9 @@ void setup()
   delay(pSettings->WAIT_PERIOD);
   // use EITHER setupWiFi OR setupWiFiManager
   
+   // get saved setting from EEPROM
+  eepromStartModeAP = pSettings->beginAsAccessPoint();
+
   if (pSettings->beginAsAccessPoint())
   {
     setupWiFi();        // local network as access point
@@ -1063,6 +1071,19 @@ void loop()
     /* send data to target server using ESP8266HTTPClient */
     /* response is handled in requestCB */
     handleHTTPClient(aRequest, wifiClient, pSettings, String(WiFi.macAddress()));
+  }
+
+  if ((WiFi.getMode() == WIFI_AP) && (eepromStartModeAP == false))
+  {
+    if (no_sta_counter < NO_STA_COUNTER_MAX)
+    {
+      no_sta_counter +=1;
+      delay(100);          // small value because loop must continue for other purposes
+    }
+    else {
+      no_sta_counter = 0;
+      setupWiFiManager();  // try to start WiFi again
+    }
   }
 
   // Stepper motor
