@@ -72,6 +72,6 @@ void sendDataToTarget(asyncHTTPrequest aRequest, WiFiClient wifiClient, Settings
     aRequest.setReqHeader("WWW-Authenticate", "Basic realm=\"model\", charset=\"UTF-8\"");
     aRequest.setReqHeader("Authorization", auth.c_str());
     aRequest.send(post_data);
-    delay(100);  // prevents a reboot
+    delay(10);  // prevents a reboot
   }
 }

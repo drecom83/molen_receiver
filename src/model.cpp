@@ -50,7 +50,7 @@ const uint8_t ACCESSPOINT_LED = D1;
 const uint8_t STATION_LED= D2;
 
 // variables for reset to STA mode
-const uint16_t NO_STA_COUNTER_MAX = 3000; // with a delay of 100 ms the max pause time is 5 minutes
+const uint16_t NO_STA_COUNTER_MAX = 6000; // with a delay of 50 ms the max pause time is 5 minutes
 uint16_t no_sta_counter = 0;
 bool eepromStartModeAP = false;     // see setup, holds the startmode from eeprom
 
@@ -76,6 +76,8 @@ WiFiSettings* pWifiSettings = &wifiSettings;
 // AsyncHTTPrequest //
 //////////////////////
 asyncHTTPrequest aRequest;
+
+bool asyncRequestAllowed = true;
 
 // detectButtonFlag lets the program know that a network-toggle is going on
 bool detectButtonFlag = false;
@@ -1033,6 +1035,7 @@ void setup()
   delay(pSettings->WAIT_PERIOD);
 
   //aRequest.setDebug(true);
+  //aRequest.setTimeout(1);
   aRequest.onReadyStateChange(requestCB);
 
   delay(pSettings->WAIT_PERIOD);
@@ -1070,7 +1073,29 @@ void loop()
   {
     /* send data to target server using ESP8266HTTPClient */
     /* response is handled in requestCB */
-    handleHTTPClient(aRequest, wifiClient, pSettings, String(WiFi.macAddress()));
+
+    //String dummyData = "{\"cpm\":\"30\"}";
+    //processServerData(dummyData);
+    //if (asyncRequestAllowed == true)
+    //{
+      handleHTTPClient(aRequest, wifiClient, pSettings, String(WiFi.macAddress()));
+    //  asyncRequestAllowed = false;
+    //}
+    /*
+    if (aRequest.readyState() != 4)
+    {
+      asyncRequestAllowed = false;
+    }
+    if (aRequest.responseHTTPcode() != 200)
+    {
+      asyncRequestAllowed = false;
+    }
+    if (asyncRequestAllowed == false)
+    {
+      Serial.println(aRequest.responseText());
+      asyncRequestAllowed = true;
+    }
+    */
   }
 
   if ((WiFi.getMode() == WIFI_AP) && (eepromStartModeAP == false))
@@ -1078,7 +1103,7 @@ void loop()
     if (no_sta_counter < NO_STA_COUNTER_MAX)
     {
       no_sta_counter +=1;
-      delay(100);          // small value because loop must continue for other purposes
+      delay(50);          // small value because loop must continue for other purposes
     }
     else {
       no_sta_counter = 0;
