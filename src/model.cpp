@@ -76,8 +76,7 @@ WiFiSettings* pWifiSettings = &wifiSettings;
 // AsyncHTTPrequest //
 //////////////////////
 asyncHTTPrequest aRequest;
-
-bool asyncRequestAllowed = true;
+long lastSendMillis;
 
 // detectButtonFlag lets the program know that a network-toggle is going on
 bool detectButtonFlag = false;
@@ -405,6 +404,9 @@ void mydebug() {
   Serial.print("firmware version: ");
   Serial.println(pSettings->getFirmwareVersion());
 
+  Serial.print("connected roleModel: ");
+  Serial.println(pSettings->getRoleModel());
+
   server.sendHeader("Cache-Control", "no-cache");
   server.sendHeader("Connection", "keep-alive");
   server.sendHeader("Pragma", "no-cache");
@@ -538,7 +540,7 @@ void getMDNS() {
 void getMyIP() {
 
   /* used to answer a xhr call from the browser that is connected to the server */
-  String result = "";
+  String result = "model_";
  
   String myIP = "";
 
@@ -998,24 +1000,6 @@ void initServer()
 }
 
 
-void requestCB(void* optParm, asyncHTTPrequest* request, int readyState){
-  if (readyState == 4)
-  {
-    if (request->responseHTTPcode() == 200)
-    {
-      String response = request->responseText();
-      //Serial.println(response);
-      processServerData(response);
-    }
-    else
-    {
-      if (request->responseHTTPcode() > 0)
-      {
-        //Serial.println(request->responseText());
-      }
-    }
-  }
-}
 
 void setup()
 {
@@ -1046,11 +1030,8 @@ void setup()
 
   initServer();
 
-  delay(pSettings->WAIT_PERIOD);
-
-  //aRequest.setDebug(true);
-  //aRequest.setTimeout(1);
-  aRequest.onReadyStateChange(requestCB);
+  // for asyncrequest
+  lastSendMillis = millis();
 
   delay(pSettings->WAIT_PERIOD);
 
@@ -1060,7 +1041,7 @@ void setup()
 void loop()
 {
   // update should be run on every loop
-  //MDNS.update();
+  MDNS.update();
 
   if (detectUpdateFlag == true)
   {
@@ -1086,32 +1067,22 @@ void loop()
   if (WiFi.getMode() == WIFI_STA)
   {
     /* send data to target server using ESP8266HTTPClient */
-    /* response is handled in requestCB */
-
-    //String dummyData = "{\"cpm\":\"30\"}";
-    //processServerData(dummyData);
-    //if (asyncRequestAllowed == true)
-    //{
-      handleHTTPClient(aRequest, wifiClient, pSettings, String(WiFi.macAddress()));
-    //  asyncRequestAllowed = false;
-    //}
-    /*
-    if (aRequest.readyState() != 4)
+    if (millis() - lastSendMillis > pSettings->getSEND_PERIOD())
     {
-      asyncRequestAllowed = false;
+      if ((aRequest.readyState() == 0) || (aRequest.readyState() == 4)) {
+          sendDataToTarget(&aRequest, wifiClient, pSettings, String(WiFi.macAddress()));
+      }
+      lastSendMillis = millis();
     }
-    if (aRequest.responseHTTPcode() != 200)
+    String response = getAsyncResponse(&aRequest);
+    if (response != "") 
     {
-      asyncRequestAllowed = false;
+      //Serial.println(response);
+      processServerData(response);
     }
-    if (asyncRequestAllowed == false)
-    {
-      Serial.println(aRequest.responseText());
-      asyncRequestAllowed = true;
-    }
-    */
   }
 
+  // For automatic Reset after loosing WiFi connection in STA mode
   if ((WiFi.getMode() == WIFI_AP) && (eepromStartModeAP == false))
   {
     if (no_sta_counter < NO_STA_COUNTER_MAX)

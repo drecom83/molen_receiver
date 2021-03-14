@@ -1,25 +1,6 @@
 #include "handleHTTPClient.h"
 #include "base64.h"
 
-
-long lastSendMillis = millis();                // part of the period for sending data to the target server
-
-
-/* send data to target server using ESP8266HTTPClient */
-void handleHTTPClient(asyncHTTPrequest aRequest, WiFiClient wifiClient, Settings * pSettings, String macAddress)
-  {
-    long currentMillis = millis();
-
-    // send data to the target server to check macaddress and devicekey of client
-    if (currentMillis - lastSendMillis > pSettings->getSEND_PERIOD())
-    {
-      sendDataToTarget(aRequest, wifiClient, pSettings, macAddress);
-      lastSendMillis = currentMillis;
-    }
-  }
-
-
-// start client to send data to the server
 String getSendData(Settings * pSettings, String macAddress) {
   String result = "{";
   result += "\"data\": {";
@@ -44,9 +25,7 @@ String getSendData(Settings * pSettings, String macAddress) {
   return result;
 }
 
-
-
-void sendDataToTarget(asyncHTTPrequest aRequest, WiFiClient wifiClient, Settings * pSettings, String macAddress)
+void sendDataToTarget(asyncHTTPrequest* pRequest, WiFiClient wifiClient, Settings * pSettings, String macAddress)
 {
   String targetServer = pSettings->getTargetServer();
   uint16_t port =  pSettings->getTargetPort();
@@ -62,16 +41,26 @@ void sendDataToTarget(asyncHTTPrequest aRequest, WiFiClient wifiClient, Settings
   auth.replace("\n","");
 
   String post_data = getSendData(pSettings, macAddress);
-  if (aRequest.readyState() == 0 || aRequest.readyState() == 4)
+  if (pRequest->readyState() == 0 || pRequest->readyState() == 4)
   {
-    aRequest.open("POST", url.c_str());
-    aRequest.setReqHeader("Content-Type", "application/json");
-    aRequest.setReqHeader("Cache-Control", "no-cache");
-    aRequest.setReqHeader("Connection", "keep-alive");
-    aRequest.setReqHeader("Pragma", "no-cache");
-    aRequest.setReqHeader("WWW-Authenticate", "Basic realm=\"model\", charset=\"UTF-8\"");
-    aRequest.setReqHeader("Authorization", auth.c_str());
-    aRequest.send(post_data);
-    delay(10);  // prevents a reboot
+    pRequest->open("POST", url.c_str());
+    pRequest->setReqHeader("Content-Type", "application/json");
+    pRequest->setReqHeader("Cache-Control", "no-cache");
+    pRequest->setReqHeader("Connection", "keep-alive");
+    pRequest->setReqHeader("Pragma", "no-cache");
+    pRequest->setReqHeader("WWW-Authenticate", "Basic realm=\"model\", charset=\"UTF-8\"");
+    pRequest->setReqHeader("Authorization", auth.c_str());
+    pRequest->send(post_data);
   }
+}
+
+String getAsyncResponse(asyncHTTPrequest* pRequest) {
+  if (pRequest->readyState() == 4)
+  {
+    if (pRequest->responseHTTPcode() == 200)
+    {
+      return pRequest->responseText();;
+    }
+  }
+  return "";
 }
