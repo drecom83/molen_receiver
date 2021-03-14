@@ -514,17 +514,34 @@ but for now, in develop-phase it is allowed here
 TODO remove this when clients are available to test
 */
 void alive() {
-
-
   String firstFreeHostname = findFirstFreeHostname();
-
-
 
   /* used to answer a xhr call from the browser that is connected to the server */
   String result = "";
-  /*
+
+  result += firstFreeHostname;
+  result += "\r\n";
+
+  String allowServer = pSettings->getTargetServer() + ":" + pSettings->getTargetPort();
+
+  if ((pSettings->getTargetPort() == 80) || (pSettings->getTargetPort() == 443))
+  {
+    allowServer = pSettings->getTargetServer();
+  } 
+  server.sendHeader("Cache-Control", "no-cache");
+  server.sendHeader("Connection", "keep-alive");
+  server.sendHeader("Pragma", "no-cache");
+  server.sendHeader("Access-Control-Allow-Origin", allowServer);
+  server.send(200, "text/html", result);
+}
+
+void getMyIP() {
+
+  /* used to answer a xhr call from the browser that is connected to the server */
+  String result = "";
+ 
   String myIP = "";
-  result += "IP address: ";
+
   if (WiFi.getMode() == WIFI_AP)
   {
     myIP = WiFi.softAPIP().toString();
@@ -534,18 +551,14 @@ void alive() {
     myIP = WiFi.localIP().toString();
   }
   result += myIP;
-  */
-  result += firstFreeHostname;
   result += "\r\n";
 
   String allowServer = pSettings->getTargetServer() + ":" + pSettings->getTargetPort();
-  //Serial.println(pSettings->getTargetServer());
-  //Serial.println(pSettings->getTargetPort());
+
   if ((pSettings->getTargetPort() == 80) || (pSettings->getTargetPort() == 443))
   {
     allowServer = pSettings->getTargetServer();
   } 
-  //Serial.println(allowServer);
   server.sendHeader("Cache-Control", "no-cache");
   server.sendHeader("Connection", "keep-alive");
   server.sendHeader("Pragma", "no-cache");
@@ -977,7 +990,8 @@ void initServer()
 
   // handles a check if this url is available
   // remove this when clients are availabe
-  server.on("/alive/", alive);
+  server.on("/_mdns/", getMDNS);
+  server.on("/_ip/", getMyIP);
 
   server.begin();
   Serial.println("HTTP server started");
