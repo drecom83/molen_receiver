@@ -513,7 +513,7 @@ void handleVersion() {
 but for now, in develop-phase it is allowed here
 TODO remove this when clients are available to test
 */
-void alive() {
+void getMDNS() {
   String firstFreeHostname = findFirstFreeHostname();
 
   /* used to answer a xhr call from the browser that is connected to the server */
@@ -1060,7 +1060,7 @@ void setup()
 void loop()
 {
   // update should be run on every loop
-  MDNS.update();
+  //MDNS.update();
 
   if (detectUpdateFlag == true)
   {
